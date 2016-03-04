@@ -16,12 +16,13 @@
   "Find the number of unique paths"
   ([m n] (paths m n 1 1))
   ([m n x y]
-   (cond
-     (and (= m x) (= n y)) 1
-     (and (> m x) (> n y)) (+ (paths m n (inc x) y) (paths m n x (inc y)))
-     (> m x)               (paths m n (inc x) y)
-     (> n y)               (paths m n x (inc y))
-     :else                 0)))
+   (let [next (partial paths m n)]
+     (cond
+       (and (= m x) (= n y)) 1
+       (and (> m x) (> n y)) (+ (next (inc x) y) (next x (inc y)))
+       (> m x)               (next (inc x) y)
+       (> n y)               (next x (inc y))
+       :else                 0))))
 
 ;; Accept commands from the command line
 (println (apply paths (take 2 (map js/parseInt *command-line-args*))))
