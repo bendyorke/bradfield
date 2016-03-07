@@ -51,4 +51,5 @@
   (into [] (map #(split % "") args))))
 
 ;; Accept commands from the command line
-(println (paths (apply clia->rows *command-line-args*)))
+(if *command-line-args*
+  (println (paths (apply clia->rows *command-line-args*))))

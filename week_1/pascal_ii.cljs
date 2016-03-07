@@ -28,4 +28,5 @@
                  (inc index)))))))
 
 ;; Accept commands from the command line
-(println (row (-> *command-line-args* first js/parseInt)))
+(if *command-line-args*
+  (println (row (-> *command-line-args* first js/parseInt))))

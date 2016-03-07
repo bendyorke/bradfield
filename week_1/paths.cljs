@@ -25,4 +25,5 @@
        :else                 0))))
 
 ;; Accept commands from the command line
-(println (apply paths (take 2 (map js/parseInt *command-line-args*))))
+(if *command-line-args*
+  (println (apply paths (take 2 (map js/parseInt *command-line-args*)))))
