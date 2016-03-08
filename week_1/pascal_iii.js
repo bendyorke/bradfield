@@ -6,9 +6,13 @@
  * Create a generator function that will generate
  * each row of pascal's triangle
  *
- * For example:
+ * For example, if you run:
+ *
  * pascal().next().next().next().value
- * // [1, 2, 1]
+ *
+ * return:
+ *
+ * [1, 2, 1]
  */
 
 function* pascal(prevRow) {
@@ -22,7 +26,7 @@ function* pascal(prevRow) {
 
 module.exports = pascal
 
-if (require.main === module && process) {
+if (require.main === module && typeof process !== 'undefined') {
   var argv = process.argv
   var n = argv[argv.length - 1]
   var gen = pascal()
