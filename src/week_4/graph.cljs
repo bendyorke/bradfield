@@ -23,6 +23,32 @@
   [graph]
   (transduce (map node-edges) concat [] graph))
 
+(defn explore
+  ([graph xform]
+   (fn step [stack visited]
+     (lazy-seq
+       (when-not (empty? stack)
+         (let [[node]  (peek stack)
+               visited (conj visited node)
+               nstacks (into (pop stack)
+                             (comp (map (partial conj cstack)) xform)
+                             (graph node))]
+           (cons node (step nstacks visited)))))))
+  ([graph xform stack]
+   ((xwalk graph xform) stack #{}))
+  ([graph xform stack start]
+   (xwalk graph xform (conj stack (list start)))))
+
+;; I have a list of paths
+;; I want to perform different actions on those paths
+;;  - Only go 5 levels deep
+;;  - Do not recheck acyclic edges
+;; I want to retrieve a list of nodes
+;; I want to perform different actions on those nodes
+;;  - Remove duplicates
+;;  - Map and check for acycicity
+
+
 (defn walk
   "Lazily walk a graph. Can optionally omit the start value to return
   a walk function that accepts a start value.  Can also omit the accumulator
