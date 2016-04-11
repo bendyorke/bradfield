@@ -1,0 +1,96 @@
+# Plan:
+# - compute complete list of courses from course count
+# - return the list of courses with no prereqs, concatenated with topo sort of prereqs DAG
+# - or empty list if prereqs don't form a DAG (i.e. the graph has cycles)
+
+# Generic Topological Graph Sorting
+
+# take this 6 node, directed acyclic graph:
+
+# 1 --> 2 --> 3
+#       \      \
+#        \ ---> 4 --> 5
+#                \ ---> 6
+
+# (if the diagram isn't clear, 3 arrows to 4, there are no cycles)
+
+# so, one top sort is this:
+
+# 1 -> 2 -> 3
+#        \ -> 4 -> 5
+#               \ -> 6
+
+# i.e.: [ 1, 2, 3, 4, 5, 6 ]
+
+# another is the one below, it's still topological because every
+# arrow is still moving foward:
+
+# 1 -> 2 -> 3
+#            \
+#             4 ----> 5
+#               \ -> 6
+
+# which looks like: [ 1, 2, 3, 4, 6, 5 ]
+
+# assuming you've got an adjacency map representation of the graph ...
+
+# init a "to sort" set that is all the nodes in the graph
+# (i.e. the keys of the adjacency list)
+# and an empty "sorted" ordered set
+
+# pick any node from "to sort"
+# let's say it's 2
+
+# now do a "depth first walk" starting from that node,
+# also passing the "sorted" set as the "do not walk" nodes
+
+# if the last node of the walked path can be found elsewhere in the
+# path then it's cyclic and there will be no topological orderering
+# of this graph, so return an empty ordered set
+
+# otherwise you have some path through the graph, like this:
+
+# 2-> 3
+#      \
+#       4 -> 5
+
+# path: [ 2, 3, 4, 5 ]
+
+# the last item in the path can safely go at the *end* of the ordered set
+# because nothing can come after it (because we would have walked that node)
+
+# so, the "sorted" ordered set looks like
+
+# [ 5 ]
+
+# now recurse, removing this node from the "to sort" set and passing along the
+# "sorted" set
+
+# as an optimization, if you pass the second last element in the last depth
+# first walk then the next recursive call will do fewer redudant walks of
+# the graph
+
+# so future iterations look like:
+
+# walked path: [ 4, 6 ]
+# sorted: [ 6, 5 ]
+
+# walked path: [ 4 ] (second last from last path)
+# sorted: [ 4, 6, 5 ]
+
+# next pick from "to sort set": 3
+# walked path: [ 3 ]
+# sorted: [ 3, 4, 6, 5 ]
+
+# next pick from "to sort set": 1
+# walked path: [ 1, 2, 3 ]
+# sorted: [ 3, 4, 6, 5 ]
+
+# waked path: [ 2 ] (second last from last path)
+# sorted: [ 2, 3, 4, 6, 5 ]
+
+# waked path: [ 1 ]
+# sorted: [ 1, 2, 3, 4, 6, 5 ]
+
+# now "to sort" is empty so we're done
+

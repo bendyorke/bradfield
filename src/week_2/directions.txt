@@ -1,0 +1,65 @@
+"insert into comments values ('first!'); insert into comments values ('second; \'i have a quote')"
+
+Given: A string consisting of multiple SQL queries that we want to seperate
+
+Knowns:
+
+- All queries have been approved by myles (ameteur sql validator)
+- Queries are seperated by a semicolon
+- Semicolons inside quotes should be ignored (single quotes only)
+- Single quotes can be escaped within single quote pairs
+
+Examples:
+    "a" -> [ "a" ]       A single query will return as a length 1 array
+ "a; b" -> [ "a", "b" ]  N queries, seperated by a semicolon, will return an array with length n
+ "'a;'" -> [ "'a;'" ]    Semicolon withing single quoted strings will seperate queries
+"'\';'" -> [ "'\';'" ]   The forward slash escaped the following character
+
+Concepts:
+split into sql statement and quoted segments
+"a 'b;' c" -> ["a" "'b;'" "c"]
+loop through the sql statements and split on semicolons
+merge back in quoted segments
+Start adding characters (being the current char) to the current query
+Character differences:
+If character is a semi colon, add it and put the query string in the results array, initializing a new query string
+If the current char is a quote, change state to in quote
+If the current char is a \ change state to escaped
+
+State differences:
+If escaped is true, just add the char to the string (ignore character differences)
+If it's quoted, and it's a quote, turn off quoting.  Otherwise, ignore character differences
+
+Pseudocode:
+Iterate through each char in the string, keeping track of:
+- Are we escaped
+- Are we in a quote
+
+Starting with results: [], query: '', in-quote: false, escaped: false, start looping through each char (char).
+
+append char to query
+
+if escaped
+  escaped = false
+  next
+
+if char == \
+  escaped = true
+  next
+
+if char == '
+  toggle in-quote
+  next
+
+if char == ;
+  if in-quote != true
+    append query to results
+    set query to ''
+    next
+
+after the loop
+
+if query is not '' append it to results
+
+return results
+
