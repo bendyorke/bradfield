@@ -1,6 +1,6 @@
 #! /usr/bin/env planck
 
-(ns week-1.strobo-i
+(ns bf.strobo-i
   (:require [planck.core :refer [*command-line-args*]]))
 
 ;; Strobogrammatic numbers:

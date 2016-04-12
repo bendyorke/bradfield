@@ -1,6 +1,6 @@
 #!/usr/bin/env planck
 
-(ns week-1.pascal-ii
+(ns bf.pascal-ii
   (:require [planck.core :refer [*command-line-args*]]))
 
 ;; Pascal's Triangle II:

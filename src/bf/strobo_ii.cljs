@@ -1,6 +1,6 @@
 #! /usr/bin/env planck
 
-(ns week-1.strobo-ii
+(ns bf.strobo-ii
   (:require [planck.core :refer [*command-line-args*]]
             [clojure.string :refer [join]]))
 

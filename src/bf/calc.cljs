@@ -1,4 +1,4 @@
-(ns week-2.calc
+(ns bf.calc
   (:require [cljs.test :refer-macros [deftest is]]))
 
 ;; Basic Calculator:

@@ -1,4 +1,4 @@
-(ns week-3.calc-ii
+(ns bf.calc-ii
   (:require [clojure.string :refer [trim split]]
             [cljs.test :refer-macros [deftest is run-tests]]))
 

@@ -1,4 +1,4 @@
-(ns week-2.polish)
+(ns bf.polish)
 
 ;; Evaluate Reverse Polish Notation:
 ;; https://leetcode.com/problems/evaluate-reverse-polish-notation/

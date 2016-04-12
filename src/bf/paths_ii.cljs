@@ -1,6 +1,6 @@
 #!/usr/bin/env planck
 
-(ns week-1.paths
+(ns bf.paths
   (:require [planck.core :refer [*command-line-args*]]
             [clojure.string :refer [split]]))
 
@@ -48,7 +48,7 @@
        0!!,000,x?0 -> [[0 ! !] [0 0 0] [x ? 0]]"
   ([#_"single string" args] (apply clia->rows (split args #"\W")))
   ([#_"list of word char strings" & args]
-    (into [] (map #(split % "") args))))
+   (into [] (map #(split % "") args))))
 
 ;; Accept commands from the command line
 (if *command-line-args*

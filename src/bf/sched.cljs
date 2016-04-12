@@ -1,4 +1,4 @@
-(ns week-4.sched
+(ns bf.sched
   (:require [cljs.test :refer-macros [deftest is run-tests]]))
 
 ;; Course Schedule II

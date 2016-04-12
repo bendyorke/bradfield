@@ -1,4 +1,4 @@
-(ns week-3.trap
+(ns bf.trap
   (:require [cljs.test :refer-macros [deftest is run-tests]]))
 
 ;; Trapping Rain Water

@@ -1,6 +1,6 @@
 #!/usr/bin/env planck
 
-(ns week-1.paths
+(ns bf.paths
   (:require [planck.core :refer [*command-line-args*]]))
 
 ;; Unique Paths:
