@@ -1,4 +1,5 @@
-(ns week-4.graph)
+(ns week-4.graph
+ (:require [cljs.test :refer-macros [deftest is run-tests]]))
 
 ;; Graph:
 #_{0 #{}      ; Node 0 depends on nothing
@@ -12,6 +13,67 @@
 #_[1 #{}]     ; Indicates node 1 has no dependancies
 #_[1 #{4 5}]  ; Indicates node 1 has 2 dependancies
 
+;; Path:
+#_(5 4 3 2 1) ; Path that ends at 5 and starts at 1
+
+;; Graph transduction
+(defn explore
+  "Explore an entire graph. It accepts a transducer to apply to
+  new paths before they are added to the stack.  It may repeat nodes
+  and infinitely loop through cycles unless specifed otherwise.  Returns
+  a list of the paths taken"
+  ([graph xform]
+   (fn step [stack visited]
+     (lazy-seq
+       (when-not (empty? stack)
+         (let [[node :as s]  (peek stack)
+               visited       (conj visited node)
+               nstacks       (into (pop stack)
+                                   (comp (map (partial conj s))
+                                         xform)
+                                   (graph node))]
+           (cons s (step nstacks visited)))))))
+  ;; Search the graph from a designated starting stack
+  ([graph xform stack]
+   ((explore graph xform) stack #{}))
+  ;; Search the graph from a designated node using a particular stack
+  ([graph xform stack start]
+   (explore graph xform (conj stack (list start)))))
+
+(defn remove-cyc
+  "Transducer to remove any cyclical paths"
+  [xf]
+  (fn
+   ([] (xf))
+   ([result] (xf result))
+   ([result input]
+    (if (apply distinct? input)
+      (xf result input)
+      result))))
+
+(defn all-paths
+  "Identity transducer"
+  [xf]
+  (fn
+   ([] (xf))
+   ([result] (xf result))
+   ([result input] (xf result input))))
+
+(defn max-depth
+  "Limit the depth one can search on a graph"
+  [n]
+  (filter #(<= (count %) n)))
+
+(defn- search
+  "Search a graph.  Returns a unique list of nodes in the order that they were visited.
+  Use search-deep to search depth first and search-wide to search bredth-first"
+  [stack graph start]
+  (sequence (comp (map first) (distinct))
+            (explore graph remove-cyc stack 0)))
+
+(def search-deep (partial search '()))
+(def search-wide (partial search #queue []))
+
 ;; Graph Introspection
 (defn node-edges
   "Return a list of dependencies for a given node [node deps]"
@@ -23,78 +85,14 @@
   [graph]
   (transduce (map node-edges) concat [] graph))
 
-(defn explore
-  ([graph xform]
-   (fn step [stack visited]
-     (lazy-seq
-       (when-not (empty? stack)
-         (let [[node]  (peek stack)
-               visited (conj visited node)
-               nstacks (into (pop stack)
-                             (comp (map (partial conj cstack)) xform)
-                             (graph node))]
-           (cons node (step nstacks visited)))))))
-  ([graph xform stack]
-   ((xwalk graph xform) stack #{}))
-  ([graph xform stack start]
-   (xwalk graph xform (conj stack (list start)))))
-
-;; I have a list of paths
-;; I want to perform different actions on those paths
-;;  - Only go 5 levels deep
-;;  - Do not recheck acyclic edges
-;; I want to retrieve a list of nodes
-;; I want to perform different actions on those nodes
-;;  - Remove duplicates
-;;  - Map and check for acycicity
-
-
-(defn walk
-  "Lazily walk a graph. Can optionally omit the start value to return
-  a walk function that accepts a start value.  Can also omit the accumulator
-  collection to return the walk function that can be provided a custom stack
-  and visited set"
-  ([graph]
-   (fn step [stack visited]
-     (lazy-seq
-       (when-not (empty? stack)
-         (let [[curr remain] ((juxt peek pop) stack)
-               neighbors     (graph curr)
-               visited       (conj visited curr)
-               next          (step (into remain (remove visited) neighbors)
-                                   (into visited neighbors))]
-           (cons curr next))))))
-  ([coll graph]
-   (fn [& start]
-     ((walk graph) (apply (partial conj coll) start) #{})))
-  ([coll graph & start]
-   (apply (walk coll graph) start)))
-
-;; Arrays will peek and pop the tail, as well as conj to the tail,
-;; therefore will result in a depth first walk
-(def walk-deep
-  "Lazily walk the graph, depth first"
-  (partial walk []))
-
-;; Queues will peek and pop the head, but conj to the tail,
-;; therefore will result in a bredth first walk
-(def walk-wide
-  "Lazily walk the graph, bredth first"
-  (partial walk #queue []))
-
 (defn acyclical?
-  "Returns true or false, indicating whether the graph is acyclic or not.
-  Can optionally provide a starting node if you want to test a single direction."
-  ([graph] (every? (partial acyclical? graph) (keys graph)))
-  ([graph start]
-   (loop [stack   [start]
-          visited #{}]
-     (let [curr (peek stack)]
-       (cond
-         (nil? curr)              true
-         (contains? visited curr) false
-         :else (recur (into (pop stack) (graph curr))
-                      (conj visited curr)))))))
+  [graph start]
+  (= (explore graph all-paths [] start)
+     (explore graph remove-cyc [] start)))
+
+(defn cyclical?
+  [graph start]
+  (not (acyclical? graph start)))
 
 ;; Graph Manipulation
 (defn replace-node
@@ -146,3 +144,30 @@
        (if-not (cond? graph)
          (recur (random-graph n m) (dec limit))
          graph)))))
+
+;; Tests
+(def acyc-graph {0 #{1 2 3}
+                 1 #{2}
+                 2 #{3}})
+
+(def cyc-graph {0 #{1}
+                1 #{2}
+                2 #{0}})
+
+(deftest max-depth-test
+  (is (= (explore acyc-graph (max-depth 1) [] 0)
+         (list (list 0)))))
+
+(deftest cyclical?-test
+  (is (true? (cyclical? cyc-graph 0)))
+  (is (false? (cyclical? acyc-graph 0))))
+
+(deftest acyclical?-test
+  (is (false? (acyclical? cyc-graph 0)))
+  (is (true? (acyclical? acyc-graph 0))))
+
+(deftest search-test
+  (is (= (search-deep acyc-graph 0)
+         (list 0 3 2 1)))
+  (is (= (search-wide acyc-graph 0)
+         (list 0 1 2 3))))
