@@ -23,22 +23,34 @@
   and infinitely loop through cycles unless specifed otherwise.  Returns
   a list of the paths taken"
   ([graph xform]
-   (fn step [stack visited]
+   (fn step [stack]
      (lazy-seq
        (when-not (empty? stack)
          (let [[node :as s]  (peek stack)
-               visited       (conj visited node)
                nstacks       (into (pop stack)
                                    (comp (map (partial conj s))
                                          xform)
                                    (graph node))]
-           (cons s (step nstacks visited)))))))
-  ;; Search the graph from a designated starting stack
-  ([graph xform stack]
-   ((explore graph xform) stack #{}))
+           (cons s (step nstacks)))))))
   ;; Search the graph from a designated node using a particular stack
-  ([graph xform stack start]
-   (explore graph xform (conj stack (list start)))))
+  ([stack graph xform & start]
+   ((explore graph xform) (into stack
+                                (comp (map list) xform)
+                                start))))
+
+(defn distinct-nodes
+  "Returns a transducer that will ensure each node is only visited once"
+  []
+  (let [visited (volatile! #{})]
+    (fn [xf]
+      (fn
+        ([] (xf))
+        ([result] (xf result))
+        ([result [node :as input]]
+         (if (contains? @visited node)
+           result
+           (do (vswap! visited conj node)
+               (xf result input))))))))
 
 (defn remove-cyc
   "Transducer to remove any cyclical paths"
@@ -51,28 +63,34 @@
       (xf result input)
       result))))
 
-(defn all-paths
-  "Identity transducer"
-  [xf]
-  (fn
-   ([] (xf))
-   ([result] (xf result))
-   ([result input] (xf result input))))
-
 (defn max-depth
   "Limit the depth one can search on a graph"
   [n]
   (filter #(<= (count %) n)))
 
-(defn- search
-  "Search a graph.  Returns a unique list of nodes in the order that they were visited.
-  Use search-deep to search depth first and search-wide to search bredth-first"
-  [stack graph start]
-  (sequence (comp (map first) (distinct))
-            (explore graph remove-cyc stack 0)))
+(defn gsearch ;; Graph Search
+  "Traverse a graph without checking whether nodes have already been touched,
+  returning a list of nodes.
 
-(def search-deep (partial search '()))
-(def search-wide (partial search #queue []))
+  (gsearch stack graph xform & start)"
+  [stack & args]
+  (sequence (map first) (apply explore (list* stack args))))
+
+(def gsearch-deep (partial gsearch '()))
+(def gsearch-wide (partial gsearch #queue []))
+
+(defn tsearch ;; Tree Search
+  "Traverses a graph, only touching each node one time, returning a list
+  of nodes
+
+  (tsearch stack graph xform & start)"
+  ([stack graph xform & args]
+   (sequence
+     (map first)
+     (apply explore (list* stack graph (comp (distinct-nodes) xform) args)))))
+
+(def tsearch-deep (partial tsearch '()))
+(def tsearch-wide (partial tsearch #queue []))
 
 ;; Graph Introspection
 (defn node-edges
@@ -87,8 +105,8 @@
 
 (defn acyclical?
   [graph start]
-  (= (explore graph all-paths [] start)
-     (explore graph remove-cyc [] start)))
+  (= (explore '() graph identity start)
+     (explore '() graph remove-cyc start)))
 
 (defn cyclical?
   [graph start]
@@ -112,10 +130,16 @@
   [graph [a b]]
   (merge-node graph [a #{b}]))
 
-(defn from-edges
-  "Create a graph from a given dependency list"
-  [deps]
-  (reduce add-edge {} deps))
+(def from-edges (partial reduce add-edge {}))
+
+(defn add-path
+  "Add a path to a graph"
+  [graph path]
+  (reduce add-edge
+          graph
+          (partition 2 (rest (interleave path path)))))
+
+(def from-paths (partial reduce add-path {}))
 
 ;; Graph Generation
 (defn random-edge
@@ -155,7 +179,7 @@
                 2 #{0}})
 
 (deftest max-depth-test
-  (is (= (explore acyc-graph (max-depth 1) [] 0)
+  (is (= (explore '() acyc-graph (max-depth 1) 0)
          (list (list 0)))))
 
 (deftest cyclical?-test
@@ -167,7 +191,7 @@
   (is (true? (acyclical? acyc-graph 0))))
 
 (deftest search-test
-  (is (= (search-deep acyc-graph 0)
+  (is (= (tsearch-deep acyc-graph identity 0)
          (list 0 3 2 1)))
-  (is (= (search-wide acyc-graph 0)
+  (is (= (tsearch-wide acyc-graph identity 0)
          (list 0 1 2 3))))
