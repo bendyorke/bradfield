@@ -78,3 +78,10 @@ go(function* () {
   v = yield take(c)
   console.log('Took', v, 'from channel')
 })
+
+// EXERCISES:
+// Remove polling from step funtion
+// Implement alt, close, and timeout functions
+// Have go routines return a channel that get recieves the final value
+// Write an HTTP Parse with a similar method declaration to:
+//   byteChunkChan => { errorChan, firstLineChan, headerChan, bodyChan }
