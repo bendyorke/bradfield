@@ -1,68 +1,38 @@
 'use strict'
 
-const blocked = Symbol('blocked')
-const free = Symbol('freeeefalllllllllinnnn') //{name: 'free'}
-
-const chan = (buffer) => ({
-  buffer: buffer || 0,
-  value: [],
-})
-
-const isFull = (chan) => {
-  return chan.value.length > chan.buffer
-}
-
-const isEmpty = (chan) => {
-  return chan.value.length === 0
-}
-
-const enqueue = (chan, val) => {
-  return chan.value.push(val)
-}
-
-const dequeue = (chan) => {
-  return chan.value.shift()
-}
-
-const step = (gen, {value: attempt, done}) => {
-  if (done) return
-  let [state, value] = attempt()
-  if (state === blocked) {
-    setTimeout(step.bind(null, gen, {value: attempt, done}), 1)
-  } else {
-    step(gen, gen.next(value))
-  }
-}
-
-const go = (gf) => {
-  const gen = gf()
-  step(gen, gen.next())
-}
-
-const put = (chan, val) => {
-  return () => {
-    if (isFull(chan)) {
-      return [blocked]
-    } else {
-      enqueue(chan, val)
-      return [free]
-    }
-  }
-}
-
-const take = (chan) => {
-  return () => {
-    if (isEmpty(chan)) {
-      return [blocked]
-    } else {
-      return [free, dequeue(chan)]
-    }
-  }
-}
+const { go, chan, put, take, timeout, close, alts } = require('./core-async-lib')
 
 const c = chan()
+const pending = Symbol('pending')
 
+/**
+ TO RUN TESTS:
+ Each go block tests a different function.  To run a test, comment out
+ the `return pending` at the start of the generator and run:
+
+ $ node --harmony --harmony_destructuring core-async.js
+
+ It should be noted that not all tests should be ran together, as they
+ may interfere with one another
+ **/
+
+/* Testing go */
 go(function* () {
+  return pending
+  let v, gc, tc
+  console.log('Creating go chan')
+  gc = go(function* () {
+    tc = timeout(1000)
+    yield take(tc)
+    return 1
+  })
+  v = yield take(gc)
+  console.log('Taking', v, 'from channel')
+})
+
+/* Testing put */
+go(function* () {
+  return pending
   console.log('Puttin 1 onto channel c')
   yield put(c, 1)
   console.log('Put 1 onto channel c')
@@ -70,7 +40,9 @@ go(function* () {
   console.log('Put 2 onto channel c')
 })
 
+/* Testing take */
 go(function* () {
+  return pending
   let v
   console.log('Taking from channel c')
   v = yield take(c)
@@ -79,9 +51,43 @@ go(function* () {
   console.log('Took', v, 'from channel')
 })
 
-// EXERCISES:
-// Remove polling from step funtion
-// Implement alt, close, and timeout functions
-// Have go routines return a channel that get recieves the final value
-// Write an HTTP Parse with a similar method declaration to:
-//   byteChunkChan => { errorChan, firstLineChan, headerChan, bodyChan }
+/* Testing timeout function */
+go(function* () {
+  return pending
+  let v
+  setTimeout(() => console.log('1 second elapsed'), 1000)
+  const timoutChan = timeout(1000)
+  console.log('Timeout chan created')
+  yield take(timoutChan)
+  console.log('Timeout chan finished')
+})
+
+/* Testing close function */
+go(function* () {
+  return pending
+  let v
+  yield put(c, 1)
+  console.log('Put 1 on channel')
+  close(c)
+  console.log('Closed channel')
+  yield put(c, 2)
+  console.log('Put 2 on channel')
+  v = yield take(c)
+  console.log('Took', v, 'from closed channel')
+  v = yield take(c)
+  console.log('Took', v, 'from closed channel')
+})
+
+/* Testing alts function */
+go(function* () {
+  return pending
+  let v, tc
+  yield put(c, 1)
+  setTimeout(() => console.log('1 second elapsed'), 1000)
+  tc = timeout(1000)
+  v = yield alts([take(tc), take(c)])
+  console.log('Took', v, 'from channel')
+  tc = timeout(1000)
+  v = yield alts([take(tc), take(c)])
+  console.log('Took', v, 'from channel')
+})

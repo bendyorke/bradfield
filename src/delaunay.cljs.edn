@@ -1,0 +1,2 @@
+{:require  [bf.delaunay]
+ :init-fns [bf.delaunay/on-jsload]}
